@@ -33,30 +33,32 @@ use parent qw(Exporter);
 # Creates and sends a token to create a new user account.
 # It assumes that the login has the correct format and is not already in use.
 sub issue_new_user_account_token {
-    my $login_name = shift;
+    my ($login, $email) = @_;
     my $dbh = Bugzilla->dbh;
     my $template = Bugzilla->template;
     my $vars = {};
 
-    # Is there already a pending request for this login name? If yes, do not throw
+    # Is there already a pending request for this email? If yes, do not throw
     # an error because the user may have lost their email with the token inside.
     # But to prevent using this way to mailbomb an email address, make sure
     # the last request is old enough before sending a new email (default: 10 minutes).
 
+    my $regexp = "^$email:";
     my $pending_requests = $dbh->selectrow_array(
         'SELECT COUNT(*)
            FROM tokens
           WHERE tokentype = ?
-                AND ' . $dbh->sql_istrcmp('eventdata', '?') . '
+                AND ' . $dbh->sql_regexp('eventdata', '?', 0, $dbh->quote($regexp)) . '
                 AND issuedate > '
                     . $dbh->sql_date_math('NOW()', '-', ACCOUNT_CHANGE_INTERVAL, 'MINUTE'),
-        undef, ('account', $login_name));
+        undef, ('account', $regexp));
 
     ThrowUserError('too_soon_for_new_token', {'type' => 'account'}) if $pending_requests;
 
-    my ($token, $token_ts) = _create_token(undef, 'account', $login_name);
+    my ($token, $token_ts) = _create_token(undef, 'account', "$email:$login");
 
-    $vars->{'email'} = $login_name . Bugzilla->params->{'emailsuffix'};
+    $vars->{'login'} = $login;
+    $vars->{'email'} = $email;
     $vars->{'expiration_ts'} = ctime($token_ts + MAX_TOKEN_AGE * 86400);
     $vars->{'token'} = $token;
 
@@ -73,7 +75,6 @@ sub issue_new_user_account_token {
 
 sub IssueEmailChangeToken {
     my ($user, $new_email) = @_;
-    my $email_suffix = Bugzilla->params->{'emailsuffix'};
     my $old_email = $user->login;
 
     my ($token, $token_ts) = _create_token($user->id, 'emailold', $old_email . ":" . $new_email);
@@ -85,11 +86,11 @@ sub IssueEmailChangeToken {
     my $template = Bugzilla->template_inner($user->setting('lang'));
     my $vars = {};
 
-    $vars->{'oldemailaddress'} = $old_email . $email_suffix;
-    $vars->{'newemailaddress'} = $new_email . $email_suffix;
+    $vars->{'oldemailaddress'} = $old_email;
+    $vars->{'newemailaddress'} = $new_email;
     $vars->{'expiration_ts'} = ctime($token_ts + MAX_TOKEN_AGE * 86400);
     $vars->{'token'} = $token;
-    $vars->{'emailaddress'} = $old_email . $email_suffix;
+    $vars->{'emailaddress'} = $old_email;
 
     my $message;
     $template->process("account/email/change-old.txt.tmpl", $vars, \$message)
@@ -98,7 +99,7 @@ sub IssueEmailChangeToken {
     MessageToMTA($message);
 
     $vars->{'token'} = $newtoken;
-    $vars->{'emailaddress'} = $new_email . $email_suffix;
+    $vars->{'emailaddress'} = $new_email;
 
     $message = "";
     $template->process("account/email/change-new.txt.tmpl", $vars, \$message)
@@ -275,7 +276,16 @@ sub Cancel {
     # is no entry in the 'profiles' table.
     my $user = new Bugzilla::User($userid);
 
-    $vars->{'emailaddress'} = $userid ? $user->email : $eventdata;
+    if ($userid) {
+        $vars->{'emailaddress'} = $user->email;
+        $vars->{'login'} = $user->login;
+    }
+    else {
+        my ($email, $login) = split(':', $eventdata);
+        $vars->{'emailaddress'} = $email;
+        $vars->{'login'} = $login;
+    }
+    
     $vars->{'remoteaddress'} = remote_ip();
     $vars->{'token'} = $token;
     $vars->{'tokentype'} = $tokentype;
@@ -446,7 +456,7 @@ Bugzilla::Token - Provides different routines to manage tokens.
 
     use Bugzilla::Token;
 
-    Bugzilla::Token::issue_new_user_account_token($login_name);
+    Bugzilla::Token::issue_new_user_account_token($login, $email);
     Bugzilla::Token::IssueEmailChangeToken($user, $new_email);
     Bugzilla::Token::IssuePasswordToken($user);
     Bugzilla::Token::DeletePasswordTokens($user_id, $reason);
@@ -466,14 +476,15 @@ Bugzilla::Token - Provides different routines to manage tokens.
 
 =over
 
-=item C<issue_new_user_account_token($login_name)>
+=item C<issue_new_user_account_token($login, $email)>
 
  Description: Creates and sends a token per email to the email address
               requesting a new user account. It doesn't check whether
               the user account already exists. The user will have to
               use this token to confirm the creation of their user account.
 
- Params:      $login_name - The new login name requested by the user.
+ Params:      $login - The new login name requested by the user.
+              $email - The email address to be associated with the account.
 
  Returns:     Nothing. It throws an error if the same user made the same
               request in the last few minutes.

@@ -53,7 +53,6 @@ use constant PARAMETERS_LOGGED_IN => qw(
     defaultseverity
     duplicate_or_move_bug_status
     emailregexpdesc
-    emailsuffix
     letsubmitterchoosemilestone
     letsubmitterchoosepriority
     mailfrom
@@ -434,7 +433,6 @@ A logged-in user can access the following parameters (listed alphabetically):
     C<defaultseverity>,
     C<duplicate_or_move_bug_status>,
     C<emailregexpdesc>,
-    C<emailsuffix>,
     C<letsubmitterchoosemilestone>,
     C<letsubmitterchoosepriority>,
     C<mailfrom>,

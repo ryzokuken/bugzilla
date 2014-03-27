@@ -33,9 +33,7 @@ BEGIN {
         }
         elsif ($type eq 'email') {
             $type = 'string';
-            if (Bugzilla->params->{'webservice_email_filter'}) {
-                $value = email_filter($value);
-            }
+            $value = email_filter($value);
         }
         return XMLRPC::Data->type($type)->value($value);
     };

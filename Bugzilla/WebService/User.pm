@@ -116,9 +116,18 @@ sub offer_account_by_email {
     my ($params) = @_;
     my $email = trim($params->{email})
         || ThrowCodeError('param_required', { param => 'email' });
+    my $login;
+   
+    if (Bugzilla->params->{use_email_as_login}) {
+        $login = $email;
+    }
+    else {
+        $login = trim($params->{login})
+            || ThrowCodeError('param_required', { param => 'login' });
+    }
 
     Bugzilla->user->check_account_creation_enabled;
-    Bugzilla->user->check_and_send_account_creation_confirmation($email);
+    Bugzilla->user->check_and_send_account_creation_confirmation($login, $email);
     return undef;
 }
 
@@ -133,11 +142,21 @@ sub create {
 
     my $email = trim($params->{email})
         || ThrowCodeError('param_required', { param => 'email' });
+    my $login;
     my $realname = trim($params->{full_name});
     my $password = trim($params->{password}) || '*';
 
+    if (Bugzilla->params->{use_email_as_login}) {
+        $login = $email;
+    }
+    else {
+        $login = trim($params->{login})
+            || ThrowCodeError('param_required', { param => 'login' });
+    }
+
     my $user = Bugzilla::User->create({
-        login_name    => $email,
+        login_name    => $login,
+        email         => $email,
         realname      => $realname,
         cryptpassword => $password
     });
@@ -184,7 +203,7 @@ sub get {
         @users = map {filter $params, {
                      id        => $self->type('int', $_->id),
                      real_name => $self->type('string', $_->name),
-                     name      => $self->type('email', $_->login),
+                     name      => $self->type('login', $_->login),
                  }} @$in_group;
 
         return { users => \@users };
@@ -236,7 +255,7 @@ sub get {
         my $user_info = {
             id        => $self->type('int', $user->id),
             real_name => $self->type('string', $user->name),
-            name      => $self->type('email', $user->login),
+            name      => $self->type('login', $user->login),
             email     => $self->type('email', $user->email),
             can_login => $self->type('boolean', $user->is_enabled ? 1 : 0),
         };
@@ -589,9 +608,14 @@ and real name.
 
 This is the recommended way to create a Bugzilla account.
 
-=item B<Param>
+=item B<Params>
 
 =over
+
+=item C<login> (string) - the login name for the new account.
+If the installation has the C<use_email_as_login> parameter switched on, then
+this parameter is ignored, and the value of the C<email> parameter will
+be used as the login name for the new account.
 
 =item C<email> (string) - the email to send the offer to.
 
@@ -643,7 +667,12 @@ are the same as below.
 
 =over
 
-=item C<email> (string) - The email address for the new user.
+=item C<login> (string) - the login name for the new account.
+If the installation has the C<use_email_as_login> parameter switched on, then
+this parameter is ignored, and the value of the C<email> parameter will
+be used as the login name for the new account.
+
+=item C<email> (string) - The email address for the new account's user.
 
 =item C<full_name> (string) B<Optional> - The user's full name. Will
 be set to empty if not specified.
@@ -659,7 +688,7 @@ resetting their password) or by the administrator.
 
 =item B<Returns>
 
-A hash containing one item, C<id>, the numeric id of the user that was
+A hash containing one item, C<id>, the numeric id of the user account that was
 created.
 
 =item B<Errors>
@@ -716,7 +745,7 @@ C<array> Contains ids of user to update.
 
 =item C<names>
 
-C<array> Contains email/login of user to update.
+C<array> Contains login name of user to update.
 
 =item C<full_name>
 
@@ -724,8 +753,10 @@ C<string> The new name of the user.
 
 =item C<email>
 
-C<string> The email of the user. Note that email used to login to bugzilla.
-Also note that you can only update one user at a time when changing the 
+C<string> The email address of the user. It may be required that this is the
+same as the login name. If you send different values in that case, the results
+are undefined.
+Note that you can only update one user at a time when changing the 
 login name / email. (An error will be thrown if you try to update this field 
 for multiple users at once.)
 

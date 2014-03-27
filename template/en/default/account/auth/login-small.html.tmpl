@@ -31,11 +31,7 @@
         id="mini_login[% qs_suffix FILTER html %]">
     <input id="Bugzilla_login[% qs_suffix FILTER html %]" required
            name="Bugzilla_login" class="bz_login"
-      [% IF Param('emailsuffix') %]
-        placeholder="Login"
-      [% ELSE %]
-        type="email" placeholder="Email Address"
-      [% END %]>
+        placeholder="Login">
     <input class="bz_password" name="Bugzilla_password" type="password"
            id="Bugzilla_password[% qs_suffix FILTER html %]" required
            placeholder="Password">
@@ -59,11 +55,7 @@
         class="mini_forgot bz_default_hidden">
     <label for="login[% qs_suffix FILTER html %]">Login:</label>
     <input name="loginname" size="20" id="login[% qs_suffix FILTER html %]" required
-      [% IF Param('emailsuffix') %]
-        placeholder="Your Login"
-      [% ELSE %]
-        type="email" placeholder="Your Email Address"
-      [% END %]>
+        placeholder="Login"
     <input id="forgot_button[% qs_suffix %]" value="Reset Password" 
            type="submit">
     <input type="hidden" name="a" value="reqpw">

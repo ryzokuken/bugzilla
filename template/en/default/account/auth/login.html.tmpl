@@ -30,17 +30,13 @@
     <tr>
       <th>
         <label for="Bugzilla_login">
-          [% IF Param('emailsuffix') %]
-            Login:
-          [% ELSE %]
-            Your Email Address:
-          [% END %]
+          Login:
         </label>
       </th>
       <td>
         <input size="35" id="Bugzilla_login" name="Bugzilla_login"
-               [%- ' type="email"' UNLESS Param('emailsuffix') %] autofocus required>
-        [% Param('emailsuffix') FILTER html %]
+               [%- ' type="email"' IF Param('use_email_as_login') %]
+               autofocus required>
       </td>
     </tr>
     <tr>

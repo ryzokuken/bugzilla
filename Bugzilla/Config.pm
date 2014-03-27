@@ -21,7 +21,10 @@ use File::Temp;
 # when it shouldn't
 %Bugzilla::Config::EXPORT_TAGS =
   (
-   admin => [qw(update_params SetParam write_params)],
+   admin => [qw(update_params
+                SetParam
+                call_param_onchange_handlers
+                write_params)],
   );
 Exporter::export_ok_tags('admin');
 
@@ -86,6 +89,19 @@ sub SetParam {
     }
 
     Bugzilla->params->{$name} = $value;
+}
+
+sub call_param_onchange_handlers {
+    my ($changes) = @_;
+
+    _load_params unless %params;
+
+    foreach my $name (@$changes) {
+        my $entry = $params{$name};
+        if (exists $entry->{'onchange'}) {
+            $entry->{'onchange'}->(Bugzilla->params->{$name}, $entry);
+        }
+    }
 }
 
 sub update_params {
@@ -198,6 +214,11 @@ sub update_params {
 
     # Bug 452525: OR based groups are on by default for new installations
     $param->{'or_groups'} = 1 if $new_install;
+
+    # Set the value of use_email_as_login to off for new installs.
+    # It has to default to on, because that's what the situation was before
+    # the setting was invented.
+    $param->{'use_email_as_login'} = 0 if $new_install;
 
     # --- REMOVE OLD PARAMS ---
 
@@ -338,6 +359,7 @@ Bugzilla::Config - Configuration parameters for Bugzilla
 
   update_params();
   SetParam($param, $value);
+  call_param_onchange_handlers(@changes);
   write_params();
 
 =head1 DESCRIPTION
@@ -367,6 +389,16 @@ Prints out information about what it's doing, if it makes any changes.
 
 May prompt the user for input, if certain required parameters are not
 specified.
+
+=item C<call_param_onchange_handlers(@changes)>
+
+Expects a list of parameter names.
+For each parameter, checks whether there is a change handler defined,
+and if so, calls it.
+
+Params:  C<@changes> (required) - A list of parameter names.
+
+Returns: nothing
 
 =item C<write_params($params)>
 

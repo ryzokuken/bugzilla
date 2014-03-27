@@ -165,14 +165,6 @@ emailregexp
     instead of 'user@example.com'). In that case, this parameter
     should be used to define the email domain.
 
-emailsuffix
-    This string is appended to login names when actually sending
-    email to a user. For example,
-    If :command:`emailregexp` has been set to allow
-    local usernames,
-    then this parameter would contain the email domain for all users
-    (i.e. '@example.com').
-
 .. _param-attachments:
 
 Attachments
@@ -316,9 +308,8 @@ address. The LDAP authentication builds on top of this scheme, rather
 than replacing it. The initial log-in is done with a username and
 password for the LDAP directory. Bugzilla tries to bind to LDAP using
 those credentials and, if successful, tries to map this account to a
-Bugzilla account. If an LDAP mail attribute is defined, the value of this
-attribute is used, otherwise the "emailsuffix" parameter is appended to LDAP
-username to form a full email address. If an account for this address
+Bugzilla account. An LDAP mail attribute must be defined.
+If an account for this address
 already exists in the Bugzilla installation, it will log in to that account.
 If no account for that email address exists, one is created at the time
 of login. (In this case, Bugzilla will attempt to use the "displayName"
@@ -598,9 +589,7 @@ will appear in the Administration page.
 
 The first screen is a search form to search for existing user
 accounts. You can run searches based either on the user ID, real
-name or login name (i.e. the email address, or just the first part
-of the email address if the "emailsuffix" parameter is set).
-The search can be conducted
+name, login name or email address. The search can be conducted
 in different ways using the listbox to the right of the text entry
 box. You can match by case-insensitive substring (the default),
 regular expression, a *reverse* regular expression

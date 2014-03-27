@@ -351,8 +351,8 @@ sub _translate_comment {
     my $comment_hash = {
         id         => $self->type('int', $comment->id),
         bug_id     => $self->type('int', $comment->bug_id),
-        creator    => $self->type('email', $comment->author->login),
-        author     => $self->type('email', $comment->author->login),
+        creator    => $self->type('login', $comment->author->login),
+        author     => $self->type('login', $comment->author->login),
         time       => $self->type('dateTime', $comment->creation_ts),
         creation_time => $self->type('dateTime', $comment->creation_ts),
         is_private => $self->type('boolean', $comment->is_private),
@@ -1212,7 +1212,7 @@ sub _bug_to_hash {
     # We don't do the SQL calls at all if the filter would just
     # eliminate them anyway.
     if (filter_wants $params, 'assigned_to') {
-        $item{'assigned_to'} = $self->type('email', $bug->assigned_to->login);
+        $item{'assigned_to'} = $self->type('login', $bug->assigned_to->login);
         $item{'assigned_to_detail'} = $self->_user_to_hash($bug->assigned_to, $params, 'assigned_to');
     }
     if (filter_wants $params, 'blocks') {
@@ -1226,12 +1226,12 @@ sub _bug_to_hash {
         $item{component} = $self->type('string', $bug->component);
     }
     if (filter_wants $params, 'cc') {
-        my @cc = map { $self->type('email', $_) } @{ $bug->cc };
+        my @cc = map { $self->type('login', $_) } @{ $bug->cc };
         $item{'cc'} = \@cc;
         $item{'cc_detail'} = [ map { $self->_user_to_hash($_, $params, 'cc') } @{ $bug->cc_users } ];
     }
     if (filter_wants $params, 'creator') {
-        $item{'creator'} = $self->type('email', $bug->reporter->login);
+        $item{'creator'} = $self->type('login', $bug->reporter->login);
         $item{'creator_detail'} = $self->_user_to_hash($bug->reporter, $params, 'creator');
     }
     if (filter_wants $params, 'depends_on') {
@@ -1259,7 +1259,7 @@ sub _bug_to_hash {
     }
     if (filter_wants $params, 'qa_contact') {
         my $qa_login = $bug->qa_contact ? $bug->qa_contact->login : '';
-        $item{'qa_contact'} = $self->type('email', $qa_login);
+        $item{'qa_contact'} = $self->type('login', $qa_login);
         if ($bug->qa_contact) {
             $item{'qa_contact_detail'} = $self->_user_to_hash($bug->qa_contact, $params, 'qa_contact');
         }
@@ -1320,7 +1320,7 @@ sub _user_to_hash {
     my $item = filter $filters, {
         id        => $self->type('int', $user->id),
         real_name => $self->type('string', $user->name),
-        name      => $self->type('email', $user->login),
+        name      => $self->type('login', $user->login),
         email     => $self->type('email', $user->email),
     }, $prefix;
     return $item;
@@ -1347,7 +1347,7 @@ sub _attachment_to_hash {
     # the filter wants them.
     foreach my $field (qw(creator attacher)) {
         if (filter_wants $filters, $field) {
-            $item->{$field} = $self->type('email', $attach->attacher->login);
+            $item->{$field} = $self->type('login', $attach->attacher->login);
         }
     }
 
@@ -1380,7 +1380,7 @@ sub _flag_to_hash {
 
     foreach my $field (qw(setter requestee)) {
         my $field_id = $field . "_id";
-        $item->{$field} = $self->type('email', $flag->$field->login)
+        $item->{$field} = $self->type('login', $flag->$field->login)
             if $flag->$field_id;
     }
 
